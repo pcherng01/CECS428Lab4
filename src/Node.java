@@ -1,77 +1,59 @@
-public class Node<T extends Comparable<T>> implements Comparable<Node<T>> {
+import java.util.PriorityQueue;
 
-	private T data;
-	private Node<T> left;
-	private Node<T> right;
-	public int level;
-	private int depth;
+public class Node {
+	int vertexNum;
+	boolean visited;
+	// PriorityQueue for storing the neighbor with the minimum edge as highest priority
+	PriorityQueue<Pair> pq1;
+	// After popping the minimum element, it will be store in pq2
+	PriorityQueue<Pair> pq2;
 
-	public Node(T data) {
-		this(data, null, null);
+	public Node(int pVertexNum) {
+		vertexNum = pVertexNum;
+		visited = false;
+		pq1 = new PriorityQueue<Pair>();
+		pq2 = new PriorityQueue<Pair>();
 	}
 
-	public Node(T data, Node<T> left, Node<T> right) {
-		super();
-		this.data = data;
-		this.left = left;
-		this.right = right;
-		if (left == null && right == null)
-			setDepth(1);
-		else if (left == null)
-			setDepth(right.getDepth() + 1);
-		else if (right == null)
-			setDepth(left.getDepth() + 1);
-		else
-			setDepth(Math.max(left.getDepth(), right.getDepth()) + 1);
-	}
-
-	public T getData() {
-		return data;
-	}
-
-	public void setData(T data) {
-		this.data = data;
-	}
-
-	public Node<T> getLeft() {
-		return left;
-	}
-
-	public void setLeft(Node<T> left) {
-		this.left = left;
-	}
-
-	public Node<T> getRight() {
-		return right;
-	}
-
-	public void setRight(Node<T> right) {
-		this.right = right;
+	public void addNeighbor(int pNeighborNum, int pWeighEdge) {
+		pq1.add(new Pair(pNeighborNum, pWeighEdge));
 	}
 
 	/**
-	 * @return the depth
+	 * Get the vertex number of the neighbor with the minimum Edge
+	 * 
+	 * @return - neighbor vertexNumber, -1 if the queue is empty
 	 */
-	public int getDepth() {
-		return depth;
+	public Pair getMinNeighbor() {
+		Pair removedPair = pq1.remove();
+		pq2.add(removedPair);
+		return removedPair;
 	}
 
-	/**
-	 * @param depth
-	 *            the depth to set
-	 */
-	public void setDepth(int depth) {
-		this.depth = depth;
+	public void resetPQ() {
+		while (pq2.peek() != null) {
+			pq1.add(pq2.remove());
+		}
+		pq2 = new PriorityQueue<Pair>();
 	}
 
-	@Override
-	public int compareTo(Node<T> o) {
-		return this.data.compareTo(o.data);
+	public boolean hasMinNeighbor() {
+		return (pq1.size() != 0);
 	}
 
-	@Override
-	public String toString() {
-		return "Level " + level + ": " + data;
-	}
+	static class Pair implements Comparable {
+		int vertexNum;
+		int weightValue;
 
+		public Pair(int pKey, int pWeight) {
+			vertexNum = pKey;
+			weightValue = pWeight;
+		}
+
+		@Override
+		public int compareTo(Object o) {
+			Pair compPair = (Pair) o;
+			return this.weightValue - compPair.weightValue;
+		}
+	}
 }
