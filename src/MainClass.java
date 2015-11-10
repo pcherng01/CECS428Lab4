@@ -1,5 +1,6 @@
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -19,7 +20,7 @@ public class MainClass {
 	public static void main(String[] args) throws FileNotFoundException {
 		// TODO Auto-generated method stub
 		getInput();
-
+		PrintWriter pw = new PrintWriter("output.txt");
 		while (weightEdgeTreeMap.firstEntry() != null) {
 			//printTreeMap();
 			System.out.println(weightEdgeTreeMap.size());
@@ -28,7 +29,7 @@ public class MainClass {
 		}
 		System.out.println("Num of gas stations: " + gasStations.size());
 		for (Integer anInt : gasStations) {
-			System.out.print(anInt + " ");
+			pw.print(anInt + "x");
 		}
 	}
 
@@ -115,6 +116,8 @@ public class MainClass {
 					}
 					eachVertexNum = eachMinPair.getEntry();
 				}
+				// Prevent concurrent Modification Exception
+				break;
 			}
 		} else {
 			// For each pair in the HashSet
@@ -182,6 +185,7 @@ public class MainClass {
 					}
 					eachVertexNum = eachMinPair.getEntry();
 				}
+				break;
 			}
 			System.out.println("Best Pair");
 			System.out.println(theBestPair.vertexNum + " " + theBestPair.verticesCovered);
