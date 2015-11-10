@@ -13,47 +13,37 @@ public class MainClass {
 	static final int DIST_LIMIT = 30;
 	// Store all nodes in HashMap for quickly access all nodes
 	static HashMap<Integer, Node> allNodesHM;
-	static HashSet<Integer> coveredVerticesHS = new HashSet<Integer>();
 	// Keep track of all edges, key is the weight of edge, value is HashSet of Pair(vNum1,vNum2)
 	static TreeMap<Integer, HashSet<Pair>> weightEdgeTreeMap;
+	// Keep track of all the gasStation
 	static HashSet<Integer> gasStations;
-
-	static HashSet<Integer> requiredVertices = new HashSet<Integer>();
+	// Store all covered vertices in HashSet
+	static HashSet<Integer> coveredVerticesHS = new HashSet<Integer>();
 
 	public static void main(String[] args) throws FileNotFoundException {
-		// TODO Auto-generated method stub
 		getInput();
-		PrintWriter pw = new PrintWriter("outputz.txt");
-		System.out.print("Size of allNodes: " + allNodesHM.size());
-		System.out.print("\nSize of requiredVertices: " + requiredVertices.size());
-		//		while (coveredVerticesHS.size() != allNodesHM.size()) {
-		//			if (allNodesHM.size() - coveredVerticesHS.size() < 3) {
-		//				System.out.println("YOLO");
-		//				for (Map.Entry<Integer, Node> eachNode : allNodesHM.entrySet()) {
-		//					if (!coveredVerticesHS.contains(eachNode.getKey())) {
-		//						coveredVerticesHS.add(eachNode.getKey());
-		//						gasStations.add(eachNode.getKey());
-		//					}
-		//				}
-		//			}
-		//			System.out.println("Total Vertices: " + allNodesHM.size());
-		//			System.out.println("Vertices covered so far: " + coveredVerticesHS.size());
-		//			System.out.println("Num of gas stations: " + gasStations.size());
-		//			newStart();
-		//		}
-		//		System.out.println("Num of gas stations: " + gasStations.size());
-		//		for (Integer anInt : gasStations) {
-		//			pw.print(anInt + "x");
-		//		}
-		//		pw.close();
+		PrintWriter pw = new PrintWriter("outputNov10.txt");
+		while (coveredVerticesHS.size() != allNodesHM.size()) {
+			System.out.printf("Covered: %d, all: %d\n", coveredVerticesHS.size(), allNodesHM.size());
+			findBestVertexAndPutGasStation();
+			System.out.println("Num of gas stations: " + gasStations.size());
+			if (allNodesHM.size() - coveredVerticesHS.size() < 12) {
+				System.out.println("YOLO");
+				for (Map.Entry<Integer, Node> eachNode : allNodesHM.entrySet()) {
+					if (!coveredVerticesHS.contains(eachNode.getKey())) {
+						coveredVerticesHS.add(eachNode.getKey());
+						gasStations.add(eachNode.getKey());
+					}
+				}
+			}
+		}
+		System.out.println("Done");
+		for (Integer anInt : gasStations) {
+			pw.print(anInt + "x");
+		}
+		pw.close();
 	}
 
-	/**
-	 * Read from input file and put every Nodes in allNodesHM Put the weightedEdge in TreeMap that maps to Pair of
-	 * vertices with that weigted edge
-	 * 
-	 * @throws FileNotFoundException
-	 */
 	public static void getInput() throws FileNotFoundException {
 		gasStations = new HashSet<Integer>();
 		weightEdgeTreeMap = new TreeMap<Integer, HashSet<Pair>>();
@@ -75,8 +65,6 @@ public class MainClass {
 			// Initializing new Node from the input file
 			newNode = new Node(vertexNum);
 
-			boolean requiredVertex = true;
-
 			eachLine = tempSc.next();
 			tempSc = new Scanner(eachLine);
 			tempSc.useDelimiter("]");
@@ -87,10 +75,7 @@ public class MainClass {
 				neighborNum = Integer.parseInt(tempSc2.next());
 				weight = Integer.parseInt(tempSc2.next());
 
-				if (weight < DIST_LIMIT) {
-					requiredVertex = false;
-				}
-
+				// Add neighbor to new Node and put the Pair in TreeMap
 				newNode.addNeighbor(neighborNum, weight);
 				HashSet<Pair> aHS = weightEdgeTreeMap.get(weight);
 				if (aHS == null) {
@@ -102,186 +87,153 @@ public class MainClass {
 				// Store all nodes in HashMap
 				allNodesHM.put(vertexNum, newNode);
 			}
-			if (requiredVertex) {
-				requiredVertices.add(vertexNum);
-			}
 		}
 		sc.close();
 	}
 
-	public static void newStart() {
-		int newVerticesCovered = 0;
-		// Get the HashSet of Pairs with minimum edge
-		HashSet<Pair> minPairSet = weightEdgeTreeMap.firstEntry().getValue();
-		// For each vertexNum in Pairs, do not want to go thru certain element twice
-		HashSet<Integer> eachNumInPair = new HashSet<Integer>();
-		// Keep track of how many vertices the selected vertex covers - want to maximize the vertices covered
-		HashSet<Integer> coveredElements = new HashSet<Integer>();
-		// Current starting vertexNum
-		int eachVertexNum = 0;
+	public static void findBestVertexAndPutGasStation() {
+		HashSet<Pair> minPairSet;
+		HashSet<Integer> eachNumInPairHS = new HashSet<Integer>();
+		HashSet<Integer> coveredElementsHS = new HashSet<Integer>();
+		Stack<Node> nodeStack = new Stack<Node>();
+		Stack<Integer> weightStack = new Stack<Integer>();
+		int numOfNewVerticesCovered = 0, startingVertexNum = 0, currentWeight = 0, maxVerticesCovered = 0;
 		Node currentNode = null, currentNeighbor, lastVisitedNode = null;
 		Node.Pair neighborPair;
 		BestPair theBestPair = null;
-		int currentWeight = 0, maxVerticesCovered = 0;
-		Stack<Node> nodeStack = new Stack<Node>();
-		Stack<Integer> weightStack = new Stack<Integer>();
 
-		if (weightEdgeTreeMap.firstEntry().getKey() > DIST_LIMIT) {
+		if (weightEdgeTreeMap.firstEntry().getKey() < DIST_LIMIT) {
+			minPairSet = weightEdgeTreeMap.firstEntry().getValue();
+			int count = 0;
 			for (Pair eachMinPair : minPairSet) {
-				eachVertexNum = eachMinPair.getEntry();
-				while (eachVertexNum != -1) {
-					if (eachNumInPair.add(eachVertexNum)) {
-						currentNode = allNodesHM.get(eachVertexNum);
-						if (!currentNode.visited) {
-							System.out.printf("Puttingz Gas Station on the best Vertex %d\n\n", currentNode.vertexNum);
-							if (weightEdgeTreeMap.firstEntry() != null)
-								removeEdgeFromTreeMap(weightEdgeTreeMap.firstEntry().getKey(), eachMinPair);
-							gasStations.add(currentNode.vertexNum);
-							coveredVerticesHS.add(currentNode.vertexNum);
-						}
-					}
-					eachVertexNum = eachMinPair.getEntry();
+				if (count == ((minPairSet.size() > 10) ? 10 : minPairSet.size())) {
+					break;
 				}
-				// Prevent concurrent Modification Exception
-				break;
-			}
-		} else {
-			// For each pair in the HashSet
-			for (Pair eachMinPair : minPairSet) {
+				count++;
 				eachMinPair.resetEntry();
-
-				// Get each int from Pair
-				eachVertexNum = eachMinPair.getEntry();
-
-				// When eachVertexNum == -1 is when we got two ints already, so stop
-				while (eachVertexNum != -1) {
-					// Check to make sure we don't run thru element twice by putting
-					//  the starting element in the HashSet, duplicate value will be ignore
-					if (eachNumInPair.add(eachVertexNum)) {
-						currentNode = allNodesHM.get(eachVertexNum);
-
+				startingVertexNum = eachMinPair.getEntry();
+				while (startingVertexNum != -1) {
+					if (eachNumInPairHS.add(startingVertexNum)) {
+						currentNode = allNodesHM.get(startingVertexNum);
 						currentNode.resetPQ();
 
-						//coveredElements.add(eachVertexNum); // Might not have to add starting vertex
 						nodeStack.push(currentNode);
 						currentNode.visited = true;
-
 						while (!nodeStack.isEmpty()) {
 							currentNode = nodeStack.peek();
-
 							while (currentNode.hasMinNeighbor()) {
 								neighborPair = currentNode.getMinNeighbor();
 								currentNeighbor = allNodesHM.get(neighborPair.vertexNum);
-
-								//							System.out.printf("CurrNode: %d, neighbor: %d\n", currentNode.vertexNum,
-								//									currentNeighbor.vertexNum);
-
-								if (currentNeighbor.visited) {
+								if (currentNeighbor.visited)
 									continue;
-								} else {
-									if ((currentWeight + neighborPair.weightValue) > DIST_LIMIT) {
-										continue;
-									} else {
-
-										Pair removedPair = new Pair(currentNode.vertexNum, currentNeighbor.vertexNum);
-										removeEdgeFromTreeMap(neighborPair.weightValue, removedPair);
-										if (coveredVerticesHS.add(neighborPair.vertexNum))
-											newVerticesCovered++;
-
-										weightStack.push(neighborPair.weightValue);
-										currentWeight += neighborPair.weightValue;
-										currentNeighbor.visited = true;
-										nodeStack.push(currentNeighbor);
-										coveredElements.add(neighborPair.vertexNum);
-										currentNode = currentNeighbor;
-
-										//										System.out.printf("CurrentNode: %d with currentWeight: %d\n", eachVertexNum,
-										//												currentWeight);
-									}
+								else if ((currentWeight + neighborPair.weightValue) > DIST_LIMIT)
+									continue;
+								else {
+									if (!coveredVerticesHS.contains(neighborPair.vertexNum))
+										numOfNewVerticesCovered++;
+									weightStack.push(neighborPair.weightValue);
+									currentWeight += neighborPair.weightValue;
+									currentNeighbor.visited = true;
+									nodeStack.push(currentNeighbor);
+									coveredElementsHS.add(neighborPair.vertexNum);
+									currentNode = currentNeighbor;
 								}
 							}
-
 							currentNode.visited = false;
 							lastVisitedNode = nodeStack.pop();
 							lastVisitedNode.resetPQ();
-
 							currentWeight -= (weightStack.isEmpty()) ? 0 : weightStack.pop();
 						}
-
-						if (coveredElements.size() > maxVerticesCovered) {
-							maxVerticesCovered = coveredElements.size();
-							theBestPair = new BestPair(lastVisitedNode.vertexNum, coveredElements.size());
-							System.out.printf("Best pair: %d, %d\n", lastVisitedNode.vertexNum, coveredElements.size());
-						}
-						if (newVerticesCovered > 0) {
-							gasStations.add(lastVisitedNode.vertexNum);
-							coveredVerticesHS.add(lastVisitedNode.vertexNum);
-						}
-						coveredElements = new HashSet<Integer>();
 					}
-					eachVertexNum = eachMinPair.getEntry();
-					break; // Remove if want to check between these two vertices in Pair
+					if (coveredElementsHS.size() > maxVerticesCovered && numOfNewVerticesCovered > 0) {
+						maxVerticesCovered = coveredElementsHS.size();
+						theBestPair = new BestPair(lastVisitedNode.vertexNum, coveredElementsHS.size());
+					}
+					startingVertexNum = eachMinPair.getEntry();
+					coveredElementsHS = new HashSet<Integer>();
 				}
-				break; // Remove if want to check the best 
 			}
-			//			System.out.println("Best Pair");
-			//			System.out.println(theBestPair.vertexNum + " " + theBestPair.verticesCovered);
-			System.out.printf("Putting Gas Station on the best Vertex %d\n\n", theBestPair.vertexNum);
-			//putGasStation(theBestPair.vertexNum);
+			System.out.printf("Count: %d, setSize: %d\n", count, minPairSet.size());
+			if (theBestPair == null) {
+				//				for (Pair eachPair : minPairSet) {
+				//					eachPair.resetEntry();
+				//					startingVertexNum = eachPair.getEntry();
+				//
+				//					System.out.println("VertexNum: " + startingVertexNum);
+				//
+				//					while (startingVertexNum != -1) {
+				//						if (!coveredVerticesHS.contains(startingVertexNum)) {
+				//							gasStations.add(startingVertexNum);
+				//
+				//							System.out.println("Placing gas Station at " + startingVertexNum);
+				//
+				//							coveredVerticesHS.add(startingVertexNum);
+				//						}
+				//						removeEdgeFromTreeMap(weightEdgeTreeMap.firstEntry().getKey(), eachPair);
+				//						System.out.println("Removing pair.");
+				//
+				//						startingVertexNum = eachPair.getEntry();
+				//					}
+				//					break;
+				//				}
+			} else {
+				putGasStation(theBestPair.vertexNum);
+			}
+		} else {
+			minPairSet = weightEdgeTreeMap.firstEntry().getValue();
+			for (Pair eachPair : minPairSet) {
+				startingVertexNum = eachPair.getEntry();
+				while (startingVertexNum != -1) {
+					if (eachNumInPairHS.add(startingVertexNum)) {
+						if (!coveredVerticesHS.contains(startingVertexNum)) {
+							gasStations.add(startingVertexNum);
+							coveredVerticesHS.add(startingVertexNum);
+						}
+					}
+					startingVertexNum = eachPair.getEntry();
+				}
+			}
 		}
 	}
 
 	public static void putGasStation(int pBestVertexNum) {
 		gasStations.add(pBestVertexNum);
-		HashMap<Integer, HashSet<Pair>> removedPairHM = new HashMap<Integer, HashSet<Pair>>();
-		Node currentNode, currNeighbor;
+		coveredVerticesHS.add(pBestVertexNum);
 		Stack<Node> nodeStack = new Stack<Node>();
 		Stack<Integer> weightStack = new Stack<Integer>();
 		Node.Pair neighborPair = null;
+		Node currentNode, currentNeighbor, lastVisitedNode;
 		int currentWeight = 0;
 
 		currentNode = allNodesHM.get(pBestVertexNum);
-
+		currentNode.resetPQ();
 		nodeStack.push(currentNode);
 		currentNode.visited = true;
 
 		while (!nodeStack.isEmpty()) {
 			currentNode = nodeStack.peek();
-
-			// While there is a uncovered neighbor
 			while (currentNode.hasMinNeighbor()) {
 				neighborPair = currentNode.getMinNeighbor();
-				currNeighbor = allNodesHM.get(neighborPair.vertexNum);
-
-				if (currNeighbor.visited) {
+				currentNeighbor = allNodesHM.get(neighborPair.vertexNum);
+				if (currentNeighbor.visited)
 					continue;
-				} else {
-					if ((currentWeight + neighborPair.weightValue) > DIST_LIMIT) {
-						continue;
-					} else {
-						HashSet<Pair> removedPairHS = removedPairHM.get(neighborPair.weightValue);
-						if (removedPairHS == null) {
-							removedPairHS = new HashSet<Pair>();
-						}
-						removedPairHS.add(new Pair(currentNode.vertexNum, currNeighbor.vertexNum));
-						removedPairHM.put(neighborPair.weightValue, removedPairHS);
-						weightStack.push(neighborPair.weightValue);
-						currentWeight += neighborPair.weightValue;
-						currNeighbor.visited = true;
-						nodeStack.push(currNeighbor);
-						currentNode = currNeighbor;
-					}
+				else if (currentWeight + neighborPair.weightValue > DIST_LIMIT)
+					continue;
+				else {
+					coveredVerticesHS.add(currentNeighbor.vertexNum);
+					removeEdgeFromTreeMap(neighborPair.weightValue, new Pair(currentNode.vertexNum,
+							currentNeighbor.vertexNum));
+					weightStack.push(neighborPair.weightValue);
+					currentWeight += neighborPair.weightValue;
+					currentNeighbor.visited = true;
+					nodeStack.push(currentNeighbor);
+					currentNode = currentNeighbor;
 				}
 			}
 			currentNode.visited = false;
-			nodeStack.pop();
+			lastVisitedNode = nodeStack.pop();
+			lastVisitedNode.resetPQ();
 			currentWeight -= (weightStack.isEmpty()) ? 0 : weightStack.pop();
-		}
-		// Removing the pair from the TreeMap
-		for (Map.Entry<Integer, HashSet<Pair>> eachEntry : removedPairHM.entrySet()) {
-			for (Pair eachPair : eachEntry.getValue()) {
-				removeEdgeFromTreeMap(eachEntry.getKey(), eachPair);
-			}
 		}
 	}
 
@@ -313,12 +265,12 @@ public class MainClass {
 
 	public static void printTreeMap() {
 		for (Map.Entry<Integer, HashSet<Pair>> eachEntry : weightEdgeTreeMap.entrySet()) {
-			System.out.print(eachEntry.getKey() + " : ");
-			HashSet<Pair> aHS = eachEntry.getValue();
-			for (Pair eachPair : aHS) {
-				System.out.printf("(%d,%d)", eachPair.vertexNum1, eachPair.vertexNum2);
-			}
-			System.out.println();
+			System.out.println(eachEntry.getKey() + " : " + eachEntry.getValue().size());
+			//			HashSet<Pair> aHS = eachEntry.getValue();
+			//			for (Pair eachPair : aHS) {
+			//				System.out.printf("(%d,%d)", eachPair.vertexNum1, eachPair.vertexNum2);
+			//			}
+			//			System.out.println();
 		}
 	}
 
