@@ -1,5 +1,6 @@
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -19,14 +20,25 @@ public class MainClass {
 	static HashSet<Integer> gasStations;
 	// Store all covered vertices in HashSet
 	static HashSet<Integer> coveredVerticesHS = new HashSet<Integer>();
+	static boolean noMoreBoolean = false;
 
 	public static void main(String[] args) throws FileNotFoundException {
 		getInput();
-		//PrintWriter pw = new PrintWriter("outputNov10.txt");
+		PrintWriter pw = new PrintWriter("outputRichsGraph.txt");
 		while (coveredVerticesHS.size() != allNodesHM.size()) {
 			System.out.printf("Covered: %d, all: %d\n", coveredVerticesHS.size(), allNodesHM.size());
 			findBestVertexAndPutGasStation();
 			System.out.println("Num of gas stations: " + gasStations.size());
+			if (noMoreBoolean) {
+				System.out.println("No More");
+				for (Map.Entry<Integer, Node> eachNode : allNodesHM.entrySet()) {
+					if (!coveredVerticesHS.contains(eachNode.getKey())) {
+						coveredVerticesHS.add(eachNode.getKey());
+						gasStations.add(eachNode.getKey());
+						System.out.println("Putting gas station on " + eachNode.getKey());
+					}
+				}
+			}
 			//			if (allNodesHM.size() - coveredVerticesHS.size() < 12) {
 			//				System.out.println("YOLO");
 			//				for (Map.Entry<Integer, Node> eachNode : allNodesHM.entrySet()) {
@@ -39,17 +51,17 @@ public class MainClass {
 		}
 		System.out.println("Done");
 		for (Integer anInt : gasStations) {
-			//pw.print(anInt + "x");
-			System.out.print(anInt + " ");
+			pw.print(anInt + "x");
+			//System.out.print(anInt + " ");
 		}
-		//pw.close();
+		pw.close();
 	}
 
 	public static void getInput() throws FileNotFoundException {
 		gasStations = new HashSet<Integer>();
 		weightEdgeTreeMap = new TreeMap<Integer, HashSet<Pair>>();
 		allNodesHM = new HashMap<Integer, Node>();
-		FileReader aFR = new FileReader("graphz.txt");
+		FileReader aFR = new FileReader("GasGraph.txt");
 		Scanner sc = new Scanner(aFR);
 		Scanner tempSc, tempSc2;
 		String eachLine, eachLineNode;
@@ -103,104 +115,106 @@ public class MainClass {
 		Node.Pair neighborPair;
 		BestPair theBestPair = null;
 
-		if (weightEdgeTreeMap.firstEntry().getKey() < DIST_LIMIT) {
-			minPairSet = weightEdgeTreeMap.firstEntry().getValue();
-			int count = 0;
-			Random aRand = new Random();
-			int randInt = aRand.nextInt() % 10;
-			for (Pair eachMinPair : minPairSet) {
-				randInt = aRand.nextInt() % 10;
-				if (randInt != 4)
-					continue;
-				if (count == ((minPairSet.size() > 5) ? 5 : minPairSet.size())) {
-					break;
-				}
-
-				count++;
-				eachMinPair.resetEntry();
-				startingVertexNum = eachMinPair.getEntry();
-				while (startingVertexNum != -1) {
-					// Don't want to go thru the one that has station already
-					//System.out.println("StartingVertexNum: " + startingVertexNum);
-					if (gasStations.contains(startingVertexNum)) {
-						count--;
-						startingVertexNum = eachMinPair.getEntry();
+		for (Map.Entry<Integer, HashSet<Pair>> eachKey : weightEdgeTreeMap.entrySet()) {
+			System.out.println("At edge weighted: " + eachKey.getKey());
+			if (eachKey.getKey() < DIST_LIMIT) {
+				minPairSet = eachKey.getValue();
+				int count = 0;
+				Random aRand = new Random();
+				int randInt = aRand.nextInt() % 10;
+				for (Pair eachMinPair : minPairSet) {
+					aRand = new Random();
+					randInt = aRand.nextInt() % 10;
+					if (randInt != 4)
 						continue;
+					if (count == ((minPairSet.size() > 2) ? 2 : minPairSet.size())) {
+						break;
 					}
-					if (eachNumInPairHS.add(startingVertexNum)) {
-						currentNode = allNodesHM.get(startingVertexNum);
-						currentNode.resetPQ();
 
-						nodeStack.push(currentNode);
-						currentNode.visited = true;
-						while (!nodeStack.isEmpty()) {
-							currentNode = nodeStack.peek();
-							while (currentNode.hasMinNeighbor()) {
-								neighborPair = currentNode.getMinNeighbor();
-								currentNeighbor = allNodesHM.get(neighborPair.vertexNum);
-								if (currentNeighbor.visited)
-									continue;
-								else if ((currentWeight + neighborPair.weightValue) > DIST_LIMIT)
-									continue;
-								else {
-									//									if (!coveredVerticesHS.contains(neighborPair.vertexNum))
-									//										numOfNewVerticesCovered++;
-									weightStack.push(neighborPair.weightValue);
-									currentWeight += neighborPair.weightValue;
-									currentNeighbor.visited = true;
-									nodeStack.push(currentNeighbor);
-									coveredElementsHS.add(neighborPair.vertexNum);
-									currentNode = currentNeighbor;
-								}
-							}
-							currentNode.visited = false;
-							lastVisitedNode = nodeStack.pop();
-							lastVisitedNode.resetPQ();
-							currentWeight -= (weightStack.isEmpty()) ? 0 : weightStack.pop();
-						}
-					}
-					for (Integer eachCoveredVertex : coveredElementsHS) {
-						if (!coveredVerticesHS.contains(eachCoveredVertex))
-							numOfNewVerticesCovered++;
-					}
-					if (coveredElementsHS.size() > maxVerticesCovered && numOfNewVerticesCovered > 0) {
-						maxVerticesCovered = coveredElementsHS.size();
-						theBestPair = new BestPair(lastVisitedNode.vertexNum, numOfNewVerticesCovered);
-					}
+					count++;
+					eachMinPair.resetEntry();
 					startingVertexNum = eachMinPair.getEntry();
-					coveredElementsHS = new HashSet<Integer>();
-					numOfNewVerticesCovered = 0;
-				}
-			}
-			System.out.printf("Count: %d, setSize: %d\n", count, minPairSet.size());
-			if (theBestPair == null) {
-				// Most likely not happen
-				weightEdgeTreeMap.remove(weightEdgeTreeMap.firstEntry().getKey());
-				System.out.println("Removing key from TreeMap");
-			} else {
-				System.out.println("New Vertices covered: " + theBestPair.verticesCovered);
-				if (theBestPair.verticesCovered < 200) {
-					weightEdgeTreeMap.remove(weightEdgeTreeMap.firstEntry().getKey());
-					System.out.println("Removing key from TreeMap");
-				} else {
-					System.out.println("Putting gas station on " + theBestPair.vertexNum);
-					putGasStation(theBestPair.vertexNum);
-				}
-			}
-		} else {
-			minPairSet = weightEdgeTreeMap.firstEntry().getValue();
-			for (Pair eachPair : minPairSet) {
-				startingVertexNum = eachPair.getEntry();
-				while (startingVertexNum != -1) {
-					if (eachNumInPairHS.add(startingVertexNum)) {
-						if (!coveredVerticesHS.contains(startingVertexNum)) {
-							gasStations.add(startingVertexNum);
-							coveredVerticesHS.add(startingVertexNum);
+					while (startingVertexNum != -1) {
+						// Don't want to go thru the one that has station already
+						//System.out.println("StartingVertexNum: " + startingVertexNum);
+						if (gasStations.contains(startingVertexNum)) {
+							count--;
+							startingVertexNum = eachMinPair.getEntry();
+							continue;
 						}
+						if (eachNumInPairHS.add(startingVertexNum)) {
+							currentNode = allNodesHM.get(startingVertexNum);
+							currentNode.resetPQ();
+
+							nodeStack.push(currentNode);
+							currentNode.visited = true;
+							while (!nodeStack.isEmpty()) {
+								currentNode = nodeStack.peek();
+								while (currentNode.hasMinNeighbor()) {
+									neighborPair = currentNode.getMinNeighbor();
+									currentNeighbor = allNodesHM.get(neighborPair.vertexNum);
+									if (currentNeighbor.visited)
+										continue;
+									else if ((currentWeight + neighborPair.weightValue) > DIST_LIMIT)
+										continue;
+									else {
+										//									if (!coveredVerticesHS.contains(neighborPair.vertexNum))
+										//										numOfNewVerticesCovered++;
+										weightStack.push(neighborPair.weightValue);
+										currentWeight += neighborPair.weightValue;
+										currentNeighbor.visited = true;
+										nodeStack.push(currentNeighbor);
+										coveredElementsHS.add(neighborPair.vertexNum);
+										currentNode = currentNeighbor;
+									}
+								}
+								currentNode.visited = false;
+								lastVisitedNode = nodeStack.pop();
+								lastVisitedNode.resetPQ();
+								currentWeight -= (weightStack.isEmpty()) ? 0 : weightStack.pop();
+							}
+						}
+						for (Integer eachCoveredVertex : coveredElementsHS) {
+							if (!coveredVerticesHS.contains(eachCoveredVertex))
+								numOfNewVerticesCovered++;
+						}
+						if (numOfNewVerticesCovered > maxVerticesCovered) {
+							maxVerticesCovered = numOfNewVerticesCovered;
+							System.out.println("Current max: " + maxVerticesCovered);
+							theBestPair = new BestPair(lastVisitedNode.vertexNum, numOfNewVerticesCovered);
+						}
+						startingVertexNum = eachMinPair.getEntry();
+						coveredElementsHS = new HashSet<Integer>();
+						numOfNewVerticesCovered = 0;
 					}
-					startingVertexNum = eachPair.getEntry();
 				}
-			}
+			}//else {
+				//				minPairSet = weightEdgeTreeMap.firstEntry().getValue();
+			//				for (Pair eachPair : minPairSet) {
+			//					startingVertexNum = eachPair.getEntry();
+			//					while (startingVertexNum != -1) {
+			//						if (eachNumInPairHS.add(startingVertexNum)) {
+			//							if (!coveredVerticesHS.contains(startingVertexNum)) {
+			//								gasStations.add(startingVertexNum);
+			//								coveredVerticesHS.add(startingVertexNum);
+			//							}
+			//						}
+			//						startingVertexNum = eachPair.getEntry();
+			//					}
+			//				}
+			//			}
+		}
+		if (theBestPair == null) {
+			noMoreBoolean = true;
+		} else {
+			System.out.println("New Vertices covered: " + theBestPair.verticesCovered);
+			//		if (theBestPair.verticesCovered < 200) {
+			//			weightEdgeTreeMap.remove(weightEdgeTreeMap.firstEntry().getKey());
+			//			System.out.println("Removing key from TreeMap");
+			//		} else {
+			System.out.println("Putting gas station on " + theBestPair.vertexNum);
+			putGasStation(theBestPair.vertexNum);
+			//}
 		}
 	}
 
